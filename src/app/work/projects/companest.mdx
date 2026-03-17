@@ -1,0 +1,43 @@
+---
+title: "Companest"
+publishedAt: "2026-03-13"
+summary: "A multi-agent control plane for building and operating agent-native companies at scale."
+images:
+  - "/images/projects/companest/cover-01.jpg"
+tag: "AI / Infrastructure"
+---
+
+## Overview
+
+Companest is a control plane for agent-native companies. It runs shared teams and company-private teams in the same runtime, routes work across teams, manages background execution, and exposes an API for multi-company operation.
+
+## Key Features
+
+- **Multi-Company Runtime** — Runs shared teams and company-private teams in one runtime. External company repos register by manifest over HTTP.
+- **Scoped Execution** — Jobs, routing, schedules, memory, and MCP tools are all scoped by company.
+- **Multiple Execution Modes** — Supports cascade, loop, council, collaborative, and conditional execution patterns.
+- **Background Execution** — Built-in job system, scheduler, and teardown lifecycle for long-running work.
+- **Control Plane API** — Full REST API for fleet status, company management, and job orchestration.
+- **Multi-Provider LLM Support** — Works with DeepSeek, Kimi/Moonshot, Anthropic Claude, and OpenAI out of the box.
+
+## Architecture
+
+Companest is structured as a modular Python package with clear separation of concerns:
+
+- **CLI & API Layer** — CLI entry point and FastAPI server for operator and programmatic access
+- **Team & Routing Layer** — Team definitions, Pi (agent) configurations, and intelligent work routing
+- **Execution Layer** — Multiple execution modes (cascade, council, collaborative, etc.)
+- **Memory & Knowledge** — Pluggable memory backends, digest generation, and public knowledge tooling
+- **Infrastructure** — Docker Compose and Terraform deployment, with production config baselines
+
+## Tech Stack
+
+- **Python 3.10+** with Pydantic, httpx, aiofiles
+- **Claude Agent SDK** and **Anthropic API** for agent orchestration
+- **FastAPI** for the control plane REST API
+- **Docker** and **Terraform** for deployment
+- **LiteLLM** for multi-provider LLM routing
+
+## Status
+
+Alpha release (v1.0.0) — usable today as a shared runtime for multiple companies. Open source under Apache 2.0.
