@@ -6,7 +6,9 @@ const person: Person = {
   lastName: process.env.NEXT_PUBLIC_PERSON_LAST_NAME || "",
   name: `${process.env.NEXT_PUBLIC_PERSON_FIRST_NAME || ""} ${process.env.NEXT_PUBLIC_PERSON_LAST_NAME || ""}`,
   role: process.env.NEXT_PUBLIC_PERSON_ROLE || "",
-  avatar: `https://github.com/${(process.env.NEXT_PUBLIC_GITHUB_URL || "").replace("https://github.com/", "")}.png`,
+  avatar: process.env.NEXT_PUBLIC_GITHUB_URL
+    ? `https://github.com/${process.env.NEXT_PUBLIC_GITHUB_URL.replace("https://github.com/", "")}.png`
+    : "/images/avatar.jpg",
   email: process.env.NEXT_PUBLIC_PERSON_EMAIL || "",
   location: (process.env.NEXT_PUBLIC_PERSON_LOCATION || "America/Los_Angeles") as Person["location"],
   languages: ["English", "Chinese"] as Person["languages"],
@@ -89,7 +91,7 @@ const about: About = {
     ),
   },
   work: {
-    display: true,
+    display: false,
     title: "Work Experience",
     experiences: [
       // TODO: Add your real work experiences here
@@ -106,7 +108,7 @@ const about: About = {
     ],
   },
   studies: {
-    display: true,
+    display: false,
     title: "Studies",
     institutions: [
       // TODO: Add your real education here
