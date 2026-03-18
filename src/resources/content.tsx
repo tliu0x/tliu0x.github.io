@@ -91,7 +91,7 @@ const about: About = {
     ),
   },
   work: {
-    display: false,
+    display: true,
     title: "Work Experience",
     experiences: [
       // TODO: Add your real work experiences here
@@ -108,7 +108,7 @@ const about: About = {
     ],
   },
   studies: {
-    display: false,
+    display: true,
     title: "Studies",
     institutions: [
       // TODO: Add your real education here
