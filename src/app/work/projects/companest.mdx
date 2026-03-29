@@ -14,10 +14,10 @@ Companest is a control plane for agent-native companies. It runs shared teams an
 
 - **Multi-Company Runtime** — Runs shared teams and company-private teams in one runtime. External company repos register by manifest over HTTP.
 - **Scoped Execution** — Jobs, routing, schedules, memory, and MCP tools are all scoped by company.
-- **Multiple Execution Modes** — Supports cascade, loop, council, collaborative, and conditional execution patterns.
+- **Multiple Execution Modes** — Supports cascade, loop, council (AsyncIO fan-out), collaborative pipeline, and conditional router execution patterns.
 - **Background Execution** — Built-in job system, scheduler, and teardown lifecycle for long-running work.
 - **Control Plane API** — Full REST API for fleet status, company management, and job orchestration.
-- **Multi-Provider LLM Support** — Works with DeepSeek, Kimi/Moonshot, Anthropic Claude, and OpenAI out of the box.
+- **Multi-Provider LLM Support** — Works with DeepSeek, Kimi/Moonshot, Anthropic Claude, OpenAI, and Alibaba out of the box.
 
 ## Architecture
 
@@ -29,14 +29,32 @@ Companest is structured as a modular Python package with clear separation of con
 - **Memory & Knowledge** — Pluggable memory backends, digest generation, and public knowledge tooling
 - **Infrastructure** — Docker Compose and Terraform deployment, with production config baselines
 
+## Sub-Projects
+
+### Cost-Aware Model Cascade Engine
+Routes across 23 models and 8+ providers with Unicode-range CJK language detection, task complexity scoring, per-model success-rate gating (skip below 15% on 5+ attempts), and heuristic adequacy checking (refusal detection, hedging penalty, relevance overlap).
+
+### Memory Lake
+3-tier storage (short/long/archive) with an OS-inspired consolidation engine ("Dreamer"): LSM-tree compaction, inode-like metadata with importance scoring, nightly dream cycles with CoW fault recovery, weekly deep consolidation, pluggable backends (File, Qdrant, S3), and public knowledge ingestion with tag-based search and MCP tool exposure.
+
+### Prediction Market Trading Agent
+Trading agent for prediction markets (Polymarket, Kalshi) with RSA-authenticated API integration, pre-trade risk engine (position limits, daily loss caps), human-in-the-loop approval, and a velocity circuit breaker cost gate (5-min rolling window, 30% threshold, auto-reset).
+
+### Telegram AI Coding Agent
+Telegram-controlled AI coding agent that remote-controls Claude Code in isolated Git worktrees with a workspace-aware MCP tool server, configurable max-turn limits, and human review gates before merge.
+
+### MCP Embedding Server
+MCP-compliant embedding server using Qwen models and FAISS ANN search with multi-mode retrieval (exact keyword, 384-dim semantic cosine, hybrid with dedup) and token-budget-aware truncation for real-time semantic retrieval.
+
 ## Tech Stack
 
-- **Python 3.10+** with Pydantic, httpx, aiofiles
+- **Python 3.10+** with Pydantic, httpx, aiofiles, AsyncIO
 - **Claude Agent SDK** and **Anthropic API** for agent orchestration
 - **FastAPI** for the control plane REST API
+- **PostgreSQL** and **FAISS** for data and vector storage
 - **Docker** and **Terraform** for deployment
 - **LiteLLM** for multi-provider LLM routing
 
 ## Status
 
-Alpha release (v1.0.0) — usable today as a shared runtime for multiple companies. Open source under Apache 2.0.
+Alpha — usable today as a shared runtime for multiple companies, but interfaces may still change while packaging, docs, and operational defaults continue to harden. Currently building a frontend console for fleet management and observability. Open source under Apache 2.0.
