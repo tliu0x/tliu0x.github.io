@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Personal portfolio website built on the **Magic Portfolio** template (v2.3.0). Deployed to **Vercel** at `https://tliu0x.vercel.app`.
+Personal portfolio website for Tao Liu. Deployed to **Vercel** at `https://tliu0x.vercel.app`.
 
 ## Tech Stack
 
