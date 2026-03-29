@@ -283,7 +283,7 @@ const about: About = {
         description: (
           <>
             Docker, AWS (S3, EC2, EMR, EKS), Argo Workflows, Airflow, GitHub
-            Actions, Terraform, W&B, Grafana, Datadog, Spark (Hadoop),
+            Actions, Terraform, Vercel, W&B, Grafana, Datadog, Spark (Hadoop),
             PostgreSQL, Redis, ScyllaDB, ClickHouse, Redpanda (Kafka), Feature
             Stores, MCP Protocol
           </>
@@ -292,6 +292,7 @@ const about: About = {
           { name: "Docker" },
           { name: "AWS" },
           { name: "Kubernetes" },
+          { name: "Vercel" },
           { name: "Airflow" },
           { name: "Terraform" },
           { name: "PostgreSQL" },
