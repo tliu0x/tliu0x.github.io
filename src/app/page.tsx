@@ -101,7 +101,12 @@ export default function Home() {
         </Column>
       </Column>
       <RevealFx translateY="16" delay={0.6}>
-        <Projects range={[1, 1]} />
+        <Column fillWidth gap="24">
+          <Heading as="h2" variant="display-strong-xs" paddingLeft="l">
+            Projects
+          </Heading>
+          <Projects />
+        </Column>
       </RevealFx>
       {routes["/blog"] && (
         <Column fillWidth gap="24" marginBottom="l">
@@ -123,7 +128,6 @@ export default function Home() {
           </Row>
         </Column>
       )}
-      <Projects range={[2]} />
       <Mailchimp />
     </Column>
   );
