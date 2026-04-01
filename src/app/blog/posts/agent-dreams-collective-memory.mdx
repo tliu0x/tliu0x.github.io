@@ -1,0 +1,86 @@
+---
+title: "Agent Dreams: Why I Chose Collective Unconscious Over Individual Memory"
+publishedAt: "2026-04-01"
+summary: "Claude Code shipped AutoDream for individual memory consolidation. I built something similar in Companest months earlier — but took it in a fundamentally different direction: dreaming as distributed, collective memory management."
+tag: "AI Engineering"
+---
+
+Anthropic recently shipped an unreleased feature in Claude Code called **AutoDream** — a background process that consolidates the agent's memory files during idle time, inspired by how human REM sleep converts short-term memories into long-term storage. It prunes stale entries, merges duplicates, and normalizes relative dates into absolute ones.
+
+When I saw it, my first reaction was: I built the same thing. My second reaction was: we made very different bets on where dreaming should happen.
+
+## The Shared Starting Point
+
+Both systems start from the same observation: **auto-generated memory decays**. The more sessions an agent runs, the worse its memory quality gets. Entries contradict each other, duplicates accumulate, temporal references like "yesterday" become meaningless after a week. Something needs to periodically clean house.
+
+Claude Code's answer is a lightweight sub-agent that runs between sessions and does a single reflective pass — prune, merge, normalize. It's elegant and simple. Any project gets this for free.
+
+In [Companest](https://github.com/tliu0x/Companest), my multi-agent collaboration platform, I started building memory consolidation around the same time. The `Dreamer` module runs nightly, scores entries by importance, compacts related memories into summaries, and garbage-collects stale data. On the surface, the mechanics look similar.
+
+But the design philosophy diverged early, and the divergence was intentional.
+
+## Individual Memory Is a Local Optimum
+
+Claude Code's AutoDream operates on a single agent's memory within a single project. It's personal — one agent reflecting on its own experiences. This makes sense for a developer tool where one human works with one AI assistant.
+
+But I don't think individual memory dreaming scales to the problems I care about. Here's why.
+
+In a multi-agent system, each agent accumulates observations from different angles. Agent A handles user communications and learns tone preferences. Agent B processes task completions and learns workflow patterns. Agent C monitors channels and picks up on team dynamics. If each agent only dreams about its own memories, you get **N isolated pools of local knowledge** — each well-organized internally, but disconnected from the whole.
+
+The interesting insights almost always live at the intersections. "The user prefers concise updates" (from Agent A) combined with "deployment tasks keep failing on Fridays" (from Agent B) combined with "the team seems stressed before releases" (from Agent C) produces something none of them could consolidate alone: **the team needs a calmer release process, communicated concisely**.
+
+Individual dreaming can't produce this. Collective dreaming can.
+
+## From REM Sleep to Collective Unconscious
+
+Jung's concept of the collective unconscious — a shared layer of knowledge beneath individual experience — turned out to be a better design metaphor than individual sleep.
+
+In Companest's architecture, dreaming is a **team-level operation**, not an agent-level one. The `Dreamer` doesn't consolidate one agent's memory. It operates across the entire team's shared memory space:
+
+```
+run_all_dreams()
+├── For each team:
+│   └── run_team_dream()
+│       ├── Score importance across ALL team memories
+│       ├── Compact related entries from ANY source
+│       ├── GC low-value entries regardless of origin
+│       └── Generate team overview → .overview.md
+```
+
+The output — a `.overview.md` file and a set of high-importance long-tier summaries — gets injected into every agent's system prompt. Every agent in the team wakes up with the same consolidated understanding. No agent has to individually discover what the collective already knows.
+
+This is the key architectural bet: **dreaming should be distributed storage with centralized consolidation**. Memories are written by many, but dreamed by one process that sees everything.
+
+## What This Changes in Practice
+
+The difference isn't just philosophical. It changes concrete system behaviors.
+
+**Memory tiers replace flat files.** Companest uses a `short` → `long` tier system with importance scoring (0.0–1.0). Claude Code's AutoDream works on flat memory files with no ranking. Tiering lets the system make principled decisions about what to keep — an entry accessed 10 times with importance 0.8 survives; an entry accessed once with importance 0.2 gets archived after 24 hours.
+
+**Deep consolidation adds a second timescale.** Beyond nightly dreams, Companest runs a weekly `deep_consolidation` pass that merges multiple long-tier entries into denser summaries. This creates a two-level temporal hierarchy: daily cleanup for noise, weekly synthesis for patterns. Claude Code has a single consolidation cycle.
+
+**Non-destructive operations preserve the record.** Companest archives entries rather than deleting them. The archive remains searchable. This matters when an agent needs to recall something that was consolidated away — the original is still there, just not in the active set. Claude Code's pruning appears to be destructive.
+
+**CoW snapshots protect against failures.** Every dream operation starts by taking a copy-on-write snapshot of the memory index. If the LLM call fails mid-consolidation (and it will, at scale), the system restores the snapshot automatically. This is an operational concern that doesn't arise in a single-user CLI tool but becomes critical in a system running 24/7.
+
+## The Tradeoff
+
+I want to be honest about what Claude Code's approach gets right that mine doesn't.
+
+**Simplicity.** AutoDream works out of the box with zero configuration. My system requires a scheduler, a memory manager, an LLM provider, and careful tuning of GC thresholds and batch sizes. For a developer tool, Claude Code's approach is unambiguously better.
+
+**Privacy.** Individual dreaming means your memories stay yours. Collective dreaming means all team members' observations are mixed during consolidation. In Companest this is the point — the agents are all serving the same team. But it's a design choice that doesn't generalize to all contexts.
+
+**Latency to value.** Claude Code's dual gate (24h + 5 sessions) is tuned for quick feedback loops. My 24-hour nightly cycle means new memories aren't consolidated until the next dream. For interactive developer workflows, faster consolidation wins.
+
+## Where I Think This Goes
+
+The broader question isn't "which dream implementation is better" — it's about where memory consolidation should live in the stack.
+
+If your system is one agent serving one user, individual dreaming is sufficient and simpler. Claude Code nailed this.
+
+If your system is multiple agents serving a shared context — a team, an organization, a long-running project — I believe dreaming needs to happen at the collective level. Individual agents shouldn't each maintain their own worldview. They should contribute observations and receive consolidated understanding.
+
+The analogy I keep coming back to: individual dreaming is journaling. Collective dreaming is institutional knowledge management. Both are valuable. But organizations that only journal don't learn — organizations that consolidate institutional knowledge do.
+
+I'm continuing to build on this in Companest. Eight more features are in the pipeline — Coordinator Mode, Haiku Gate, Deep Plan, and others — all building on the assumption that the interesting problems in multi-agent systems are collective, not individual. The dream engine is just the foundation.
