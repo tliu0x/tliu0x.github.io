@@ -1,0 +1,112 @@
+---
+title: "Harness Engineering Is HR Engineering for Non-Humans"
+publishedAt: "2026-04-22"
+summary: "Every company has row-level security on its BI dashboards and won't let an intern query customer PII. But we routinely deploy agents with a full database URL and a shell. The hardest problem in harness engineering isn't sandboxing — it's the permission model business already solved, the team-lead feedback loop we just rebuilt, and the agent-internship institution we haven't built yet."
+tag: "AI Engineering"
+---
+
+No company on earth gives a brand-new intern a direct production database connection, an SSH key to every server, and a shell. We force them through a carefully scoped credential chain: a read-only replica for the first week, narrow service accounts for what they actually need to touch, approval workflows anywhere real money or real customer data is involved. This isn't policy — it's instinct. You don't give someone you just met the keys to everything.
+
+And then we deploy agents.
+
+The typical agent stack today hands a large language model a shell, a full database URL, an API token with broad scopes, and a filesystem root, wraps it in a thin harness, and calls it production-ready. We've recreated the *opposite* of every business permission model we've spent thirty years building.
+
+This is the gap harness engineering has to close. And it's not fundamentally a sandbox problem. It's a *permissions* problem.
+
+## Business Solved This. Agents Are Rediscovering It.
+
+Every serious enterprise system encodes some version of "who can do what, to what, and when."
+
+- Snowflake has row access policies and column masking. Databricks Unity Catalog has catalog-, schema-, table-, and row-level grants.
+- Salesforce has record-level sharing, field-level security, and profile-scoped visibility rules.
+- Stripe and modern finance tools have dashboard role scoping: support agents can refund up to $500; anything bigger needs a manager.
+- SOX-bound orgs have approval workflows where the initiator of a change cannot also be its approver.
+
+These aren't security afterthoughts. They are *the product*. A business metrics system isn't just queries over data — it's queries over data mediated by an identity layer that answers "is this person allowed to see this, right now, in this context?"
+
+When agents enter these systems, they bring a new question: whose identity are they acting under? Theirs? The user's? A service account? And what scopes come with that identity?
+
+Most current agent frameworks answer this by... mostly not answering it. The agent inherits whatever service account the server is running as, which usually has far too much access. That's the intern-with-root problem, and it's silently everywhere.
+
+The industry has started to notice. OpenAI's new Agents SDK introduced a Manifest abstraction explicitly for describing the agent's workspace. Anthropic's Claude Managed Agents is structured as brain → hands → session, where the hands are a scoped sandbox. Cloudflare, Vercel, Modal, E2B, and Northflank all shipped agent sandbox primitives in early 2026. But sandboxing is infrastructure; permission modeling is product. Infrastructure alone won't save you from an agent that's technically contained but still has authority to do too much.
+
+## Hermes and the Team-Lead RL Loop
+
+Hermes Agent and OpenClaw are both called agent frameworks, and both are self-hosted, persistent, and long-running. But they're betting on different corners of the harness problem.
+
+**OpenClaw** is gateway-first: a strong control plane, a wide multi-channel inbox (Slack, WhatsApp, iMessage, WeChat, Telegram, etc.), skills authored by humans. It's very good at "I know what I want this agent to do, let me configure it tightly."
+
+**Hermes** is learning-first. It uses GEPA — Genetic-Pareto Prompt Evolution, ICLR 2026 Oral — to mutate skills offline from execution traces, runs a Pareto selection over candidates, and then opens a *pull request* to a human for approval before the new skill takes effect.
+
+That PR-approval step is the most architecturally honest move I've seen in 2026, and it's the piece I want to dwell on.
+
+What's actually happening when a human reviews and merges an evolved skill: the human is acting as a **team lead providing a reinforcement signal on a junior's work**. GEPA is the intern coming back with a proposed new way to do things. The reviewer says yes, no, or "yes but." The merged PR is the reward.
+
+This structure is closer to how actual junior engineers learn than either supervised fine-tuning or token-level RLHF. The feedback is on *completed work in context*. The signal is roughly binary (merged / not merged). The iteration is at the skill level, not the token level. And — this is the permissions piece again — the PR-approval gate is itself a permission boundary: the agent is scoped to "can propose new skills"; the human has the escalated scope of "can admit new skills into production." That delegation maps cleanly onto the initiator-cannot-be-approver pattern SOX-conscious orgs have required for decades. Hermes didn't set out to solve compliance. It solved it as a side effect of doing the RL loop safely.
+
+## The Bias We Just Introduced
+
+This design works. It's strictly better than letting an agent self-modify unbounded. But it has a failure mode that gets worse the longer the agent runs with the same reviewer.
+
+Every merged PR encodes the reviewer's taste, blind spots, and context. After a year of "the team lead" approving and rejecting skill mutations, the agent's skill library isn't really a model of how to do the work well. It's a model of *how this specific team lead believes the work should be done*. Over-index on readability? The agent will too. Hate certain libraries? Those skills will never evolve. Misread a tradeoff? That misread gets baked in.
+
+This is the same dynamic that happens with human juniors who spend their whole career under one manager. They become excellent at their manager's idiom. They also absorb their manager's limits. In business, we call this being institutionalized. In agents, it's silently encoded in skill files.
+
+Progress, yes. Single-mentor bias scales badly as the agent's accumulated skill library grows.
+
+## The Next Step: Agent Internship Across Mentors
+
+Here's how humans get out of this. A senior engineer who has worked at one company for fifteen years is, in general, less well-calibrated than a senior who has worked at five companies over the same span. The delta isn't about reading more or thinking more — it's about having done real work under different contexts, different constraints, and different correctors. Each mentor gave them a biased signal; crossing multiple signals produced a methodology that doesn't live fully inside any single one of them.
+
+That last part matters. It's not averaging. It's synthesis above the mentors.
+
+For agents, the analog is clear in theory and hard in practice: **let agents intern at different teams, accept corrections from different humans, and synthesize a methodology that lives above any single reviewer's taste.**
+
+A concrete sketch of what that looks like:
+
+1. A general-purpose "backend debugging" agent starts its life inside Team A. A's lead reviews its PRs. The agent accumulates ~100 skills shaped by A's taste.
+2. The agent rotates — temporarily, or as a forked instance — into Team B. Same role, different context, different reviewer. Some of A's skills survive B's reviews. Some get overwritten. Some fork into variants.
+3. After N rotations, the surviving-and-reinforced skills are the ones that cross-validated across multiple mentors. Skills only one mentor liked either remain specialized (tagged to that context) or get retired.
+
+GEPA's Pareto selection mechanism is actually well-suited to this: you can explicitly optimize skills along a multi-reviewer Pareto frontier rather than collapsing to a single-reviewer scalar. The technical machinery is basically already there. What isn't there is the *sociotechnical* infrastructure — the agent-internship institution itself.
+
+Most of the hard problems this opens up are not ML problems. They're the same problems human internship programs have been wrestling with for a century.
+
+**Who owns the learnings?** If my agent interns at Company B for a month and comes back with sharper skills, does B get to keep the improvement? Does my company? Does the agent itself? There's a real IP and labor-economics question here that open-source agent frameworks are quietly sidestepping.
+
+**How is privacy preserved during rotation?** A skill like "how to write good commit messages" travels fine. A skill that encodes specifics of Company A's proprietary codebase obviously doesn't. Somewhere between those extremes lives most of the interesting work. Federated learning, differential privacy, and abstraction-by-generalization are all plausible primitives, but none of them solve this out of the box.
+
+**Who selects the mentors?** An agent trained exclusively by top-5% engineers is different from one trained by a random sample. Mentor curation becomes its own axis of bias — just a more sophisticated one.
+
+**What about conflicting reviews?** In human internships, mentor disagreement is itself pedagogically valuable: the intern learns to recognize tradeoffs rather than rules. For agents, a Pareto selection that keeps *both* variants tagged with their originating context produces the same effect. The agent ends up with "this is how it's done in Team A's style / this is how it's done in Team B's style / and here's the shared core." That shared core is what starts to look like methodology.
+
+## Back to Permissions
+
+All of this ties back to where we started. **Every rotation is a permission event.** Agent A entering Company B's environment isn't just a deployment — it's an identity transition. What scopes does it get there? What does it lose when it leaves? What does it carry back? These aren't new problems. They are the employee onboarding and offboarding problems that HR and IAM teams have been solving for decades, now applied to a non-human principal.
+
+Harness engineering, at its most developed, is going to look less like sandbox engineering and more like HR engineering. Sandboxes get an agent to "it can't break out of this box." Permission modeling gets it to "it can only do what someone in this role would be allowed to do, even inside the box." Team-lead PR review gets it to "and it only learns things a human approved." Internship rotation gets it to "and over time, across enough teams, it develops a methodology that outlives any single reviewer's taste."
+
+If harness engineering is the next step after AI-Ops, the piece we're still underbuilding is agent identity and permissions as *first-class* concerns — not as extensions of whatever service account the process happens to run under. The companies that win the next phase of this aren't going to be the ones with the best sandbox VMs. They're going to be the ones who figured out, before everyone else, that they were building HR systems for non-humans, and stopped pretending otherwise.
+
+## References
+
+**On harness engineering as a discipline**
+- Martin Fowler, [*Harness engineering for coding agent users*](https://martinfowler.com/articles/harness-engineering.html)
+- OpenAI, [*Harness engineering: leveraging Codex in an agent-first world*](https://openai.com/index/harness-engineering/)
+- Red Hat Developer, [*Harness engineering: structured workflows for AI-assisted development*](https://developers.redhat.com/articles/2026/04/07/harness-engineering-structured-workflows-ai-assisted-development)
+- AlphaSignal, [*A Closer Look at Harness Engineering from Top AI Companies*](https://alphasignalai.substack.com/p/a-closer-look-at-harness-engineering)
+- arXiv:2603.05344, [*Building Effective AI Coding Agents for the Terminal: Scaffolding, Harness, Context Engineering, and Lessons Learned*](https://arxiv.org/abs/2603.05344)
+
+**On agent sandboxing and permissions**
+- OpenAI, [*The next evolution of the Agents SDK*](https://openai.com/index/the-next-evolution-of-the-agents-sdk/)
+- Northflank, [*How to sandbox AI agents in 2026: MicroVMs, gVisor & isolation strategies*](https://northflank.com/blog/how-to-sandbox-ai-agents)
+- ARMO, [*AI Agent Sandboxing & Progressive Enforcement: The Complete Guide*](https://www.armosec.io/blog/ai-agent-sandboxing-progressive-enforcement-guide/)
+- Firecrawl, [*AI Agent Sandbox: How to Safely Run Autonomous Agents in 2026*](https://www.firecrawl.dev/blog/ai-agent-sandbox)
+
+**On Hermes Agent, GEPA, and OpenClaw**
+- Nous Research, [*Hermes Agent — The Agent That Grows With You*](https://hermes-agent.nousresearch.com/)
+- Turing Post, [*AI 101: Hermes Agent — OpenClaw's Rival? Differences and Best Use Cases*](https://www.turingpost.com/p/hermes)
+- The New Stack, [*OpenClaw vs. Hermes Agent: The race to build AI assistants that never forget*](https://thenewstack.io/persistent-ai-agents-compared/)
+- ScreenshotOne, [*Hermes Agent vs OpenClaw: one is agent-first, the other gateway-first*](https://screenshotone.com/blog/hermes-agent-versus-openclaw/)
+- MindStudio, [*What Is Hermes Agent? The OpenClaw Alternative with a Built-In Learning Loop*](https://www.mindstudio.ai/blog/what-is-hermes-agent-openclaw-alternative)
+- OpenClaw, [*Personal AI Assistant*](https://openclaw.ai/)
